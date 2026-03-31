@@ -1,4 +1,3 @@
-
 import Groq from 'groq-sdk';
 import dotenv from 'dotenv';
 import { log } from 'console';
@@ -9,53 +8,53 @@ export class Brain {
   private llm = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
   // 🧠 Ultra-robust JSON extractor
+ 
   private extractJSON(raw: string): any {
-    try {
-      if (!raw) throw new Error('Empty response');
+     try {
+       if (!raw) throw new Error('Empty response');
+ 
+       // 🔥 1. Remove ALL known garbage tokens
+       let cleaned = raw
+         .replace(/```json/g, '')
+         .replace(/```/g, '')
+         .replace(/<\|.*?\|>/g, '') // remove <|python_tag|> etc
+         .replace(/assistant/g, '')
+         .trim();
+ 
+       // 🔥 2. Extract ALL JSON objects
+       const matches = cleaned.match(/\{[\s\S]*?\}/g);
+ 
+       if (!matches || matches.length === 0) {
+         throw new Error('No JSON found');
+       }
+ 
+       // 🔥 3. Take LAST JSON (most important)
+       const lastJson = matches[matches.length - 1];
+       if (!lastJson) return
+       // 🔥 4. Fix invalid JSON (single quotes → double quotes)
+       const safeJson = lastJson
+         .replace(/(\w+):/g, '"$1":') // keys to "key"
+         .replace(/'/g, '"') + "}" // values to ""
+       log(safeJson) 
+ 
+         return JSON.parse(safeJson);
+     } catch (err) {
+       console.error('❌ JSON PARSE FAILED');
+       console.error('RAW RESPONSE:', raw);
+ 
+       return {
+         role: 'agent',
+         message: 'Failed to parse LLM response',
+         action: null,
+         returnToBrain: false,
+         payload: {}
+       };
+     }
+   }
 
-      // 🔥 1. Remove ALL known garbage tokens
-      let cleaned = raw
-        .replace(/```json/g, '')
-        .replace(/```/g, '')
-        .replace(/<\|.*?\|>/g, '') // remove <|python_tag|> etc
-        .replace(/assistant/g, '')
-        .trim();
-
-      // 🔥 2. Extract ALL JSON objects
-      const matches = cleaned.match(/\{[\s\S]*?\}/g);
-
-      if (!matches || matches.length === 0) {
-        throw new Error('No JSON found');
-      }
-
-      // 🔥 3. Take LAST JSON (most important)
-      const lastJson = matches[matches.length - 1];
-
-      // 🔥 4. Fix invalid JSON (single quotes → double quotes)
-      const safeJson = lastJson
-        .replace(/(\w+):/g, '"$1":') // keys to "key"
-        .replace(/'/g, '"') + "}"; // values to ""
-      log(safeJson) 
-
-        return JSON.parse(safeJson);
-    } catch (err) {
-      console.error('❌ JSON PARSE FAILED');
-      console.error('RAW RESPONSE:', raw);
-
-      return {
-        role: 'agent',
-        message: 'Failed to parse LLM response',
-        action: null,
-        returnToBrain: false,
-        payload: {}
-      };
-    }
-  }
 
   async runLlm(messages: any) {
-   
-    
-      const systemPrompt = `
+    const systemPrompt = `
       You are NOMAD-1, an AI terminal execution agent.
       
       STRICT RULE:
@@ -212,15 +211,16 @@ export class Brain {
       ---
       
       If you break format → system will crash.
-      
+      if theme is case there you just need to send msg to user keep action fild Empty
       Think → Decide → Act → Wait → Repeat
+      massages like Folder "haaaa" created successfully. Please navigate to the folder can affect the JSON parser so do not use "" insde a message no matter what if you use them "" inside message system will crash insted use template littral
+      you should avoid using " " in massage string
+      .
       `;
-
-
 
     const formattedMessages = messages.map((msg: any) => ({
       role: msg.role === 'agent' ? 'assistant' : msg.role,
-      content: msg.message || ''
+      content: msg.message || '',
     }));
 
     const response = await this.llm.chat.completions.create({
@@ -228,7 +228,7 @@ export class Brain {
       temperature: 0,
       messages: [
         { role: 'system', content: systemPrompt },
-        ...formattedMessages
+        ...formattedMessages,
       ],
     });
 
