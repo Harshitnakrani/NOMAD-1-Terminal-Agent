@@ -1,6 +1,6 @@
 import type { Express } from 'express';
 import express from 'express';
-import { agentRoute } from './agent/routes/agaent.route.js';
+import { agentRoute } from './agent/routes/agent.route.js';
 
 const server: Express = express();
 

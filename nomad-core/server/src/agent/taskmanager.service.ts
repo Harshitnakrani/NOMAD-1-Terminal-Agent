@@ -1,3 +1,4 @@
+import { log } from 'console';
 import { Brain } from '../llm/index.js';
 import { agentService } from './agent.service.js';
 import { tools, type ApiResponse, type Messages } from './types/types.js';
@@ -16,30 +17,25 @@ class TaskManager {
             };
         }
 
-        console.log(response)
+        console.log(chat)
 
         switch (response.action) {
     
+           
             case 'runGenratedCommand':
-                const result = await agentService.runGeneratedCommand(response.payload.command);
-        
-                if (response.returnToBrain) {
-                    return await this.runAgentTask([
-                        ...chat,
-                        response,
-                        {
-                            role: 'system',
-                            message: `Command result: ${result}`,
-                            returnToBrain: false,
-                            payload: {}
-                        }
-                    ]);
-                }
-        
-                return {
-                    success: true,
-                    message: response.message,
-                };
+              const result = await agentService.runGeneratedCommand(response.payload.command);
+              
+                    chat.push(response)
+                   await this.runAgentTask(chat) 
+                
+                if (!response.returnToBrain) {
+                       
+              return {
+                success: true,
+                message: response.message,
+              };
+                   }
+
 
         }
         return {
