@@ -1,7 +1,6 @@
-import readlineSync from 'readline-sync';
 import axios from 'axios';
 import pc from 'picocolors';
-import { spinner } from '@clack/prompts';
+import { intro, outro, text, spinner, isCancel, cancel, log } from '@clack/prompts';
 
 const API_URL = 'http://localhost:8000/api/v1/chat';
 
@@ -23,7 +22,6 @@ const BANNER = `
 `;
 
 function printBanner() {
-  // console.clear();
   console.log(pc.white(BANNER));
   console.log(pc.gray('  Tips for getting started:'));
   console.log(pc.gray('  1. Ask questions, edit files, or run commands.'));
@@ -39,7 +37,6 @@ function printAgentResponse(message: string) {
   const lines = message.split('\n');
   const width = Math.max(...lines.map(l => l.length), 60);
   const border = pc.gray('─'.repeat(width + 4));
-
   console.log();
   console.log(border);
   console.log(pc.gray('  Agent Response'));
@@ -53,30 +50,42 @@ function printAgentResponse(message: string) {
 
 async function main() {
   printBanner();
+  intro(pc.white('NOMAD Chat'));
+
   const chat: Message[] = [];
 
   while (true) {
-    const userInput = readlineSync.question(pc.white('> '));
-    console.log(userInput)
-    if (userInput.toLowerCase() === 'exit' || userInput.toLowerCase() === 'quit') {
+    const userInput = await text({
+      message: pc.white('>'),
+      placeholder: 'Type a message or "exit" to quit',
+    });
+
+    if (isCancel(userInput)) {
+      cancel('Session cancelled.');
       process.exit(0);
     }
 
-    if (!userInput.trim()) continue;
+    const input = (userInput as string).trim();
+
+    if (!input) continue;
+
+    if (input.toLowerCase() === 'exit' || input.toLowerCase() === 'quit') {
+      outro(pc.gray('Goodbye!'));
+      process.exit(0);
+    }
 
     chat.push({
       role: 'user',
-      message: userInput,
-      // returnToBrain: true
+      message: input,
     });
-    
+
     const s = spinner();
     s.start(pc.gray('Thinking...'));
 
     try {
-      const response = await axios.post(API_URL, { chat }, { 
+      const response = await axios.post(API_URL, { chat }, {
         timeout: 120000,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
       });
 
       s.stop(pc.gray('Done'));
@@ -84,7 +93,6 @@ async function main() {
       if (response.data && (response.data.status === 200 || response.status === 200)) {
         const agentMessage = response.data.message || 'No message returned';
         printAgentResponse(agentMessage);
-
         chat.push({
           role: 'agent',
           message: agentMessage,
@@ -92,13 +100,13 @@ async function main() {
           payload: response.data.data,
         });
       } else {
-        console.log(pc.red(`\n  API Error: ${response.data?.message || 'Unknown status'}`));
+        log.error(`API Error: ${response.data?.message || 'Unknown status'}`);
       }
     } catch (error: any) {
       s.stop(pc.red('Failed'));
-      console.log(pc.red(`\n  Error: ${error.message}`));
+      log.error(`Error: ${error.message}`);
       if (error.response) {
-        console.log(pc.red(`  Details: ${JSON.stringify(error.response.data)}`));
+        log.error(`Details: ${JSON.stringify(error.response.data)}`);
       }
     }
   }
