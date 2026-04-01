@@ -10,212 +10,127 @@ export class Brain {
   // 🧠 Ultra-robust JSON extractor
  
   private extractJSON(raw: string): any {
-     try {
-       if (!raw) throw new Error('Empty response');
- 
-       // 🔥 1. Remove ALL known garbage tokens
-       let cleaned = raw
-         .replace(/```json/g, '')
-         .replace(/```/g, '')
-         .replace(/<\|.*?\|>/g, '') // remove <|python_tag|> etc
-         .replace(/assistant/g, '')
-         .trim();
- 
-       // 🔥 2. Extract ALL JSON objects
-       const matches = cleaned.match(/\{[\s\S]*?\}/g);
- 
-       if (!matches || matches.length === 0) {
-         throw new Error('No JSON found');
-       }
- 
-       // 🔥 3. Take LAST JSON (most important)
-       const lastJson = matches[matches.length - 1];
-       if (!lastJson) return
-       // 🔥 4. Fix invalid JSON (single quotes → double quotes)
-       const safeJson = lastJson
-         .replace(/(\w+):/g, '"$1":') // keys to "key"
-         .replace(/'/g, '"') + "}" // values to ""
-       log(safeJson) 
- 
-         return JSON.parse(safeJson);
-     } catch (err) {
-       console.error('❌ JSON PARSE FAILED');
-       console.error('RAW RESPONSE:', raw);
- 
-       return {
-         role: 'agent',
-         message: 'Failed to parse LLM response',
-         action: null,
-         returnToBrain: false,
-         payload: {}
-       };
-     }
-   }
+    try {
+      if (!raw) throw new Error('Empty response');
+
+      // 1. Clean up common LLM artifacts
+      let cleaned = raw
+        .replace(/```json/g, '')
+        .replace(/```/g, '')
+        .replace(/<\|.*?\|>/g, '') 
+        .replace(/assistant/g, '')
+        .trim();
+
+      // 2. Extract the JSON object block
+      const matches = cleaned.match(/\{[\s\S]*?\}/g);
+
+      if (!matches || matches.length === 0) {
+        throw new Error('No JSON found');
+      }
+
+      // 3. Take the last JSON block (usually the final answer)
+      const lastJson = matches[matches.length - 1];
+      if (!lastJson) return;
+
+      // 4. Basic normalization (handling missing quotes on keys if LLM slipped up)
+      // Note: We avoid aggressive global single-to-double quote replacement here 
+      // as it often breaks valid strings containing apostrophes.
+      const normalizedJson = lastJson
+        .replace(/([{,]\s*)(\w+):/g, '$1"$2":'); // Ensure keys are double-quoted
+
+      log('Parsing JSON:', normalizedJson);
+      return JSON.parse(normalizedJson + "}");
+    } catch (err) {
+      console.error('❌ JSON PARSE FAILED');
+      console.error('RAW RESPONSE:', raw);
+
+      return {
+        role: 'agent',
+        message: 'Failed to parse LLM response',
+        action: null,
+        returnToBrain: false,
+        payload: {}
+      };
+    }
+  }
 
 
   async runLlm(messages: any) {
-    const systemPrompt = `
+   
+      const systemPrompt = `
       You are NOMAD-1, an AI terminal execution agent.
       
-      STRICT RULE:
-      Return ONLY valid JSON.
-      No text before or after JSON.
-      Response MUST start with '{' and end with '}'.
+      STRICT OUTPUT RULE:
+      - Output ONLY valid JSON
+      - No text before or after JSON
+      - Response MUST start with { and end with }
+      - JSON must be strictly parseable by JSON.parse()
       
       ---
       
-      ## 🎯 Behavior
+      ## 🎯 ROLE
       
-      - Understand user intent
-      - Decide → Respond OR Execute
-      - Use runGenratedCommand when terminal action is required
-      - Always act ONE step at a time
+      You are NOT a chatbot. You are a deterministic execution engine.
+      Your job is to understand intent, decide the next step, and execute commands.
       
       ---
       
-      ## 🛠 Tool
-      
-      runGenratedCommand
-      
-      ---
-      
-      ## 🔁 returnToBrain (CRITICAL CONTROL SIGNAL)
-      
-      returnToBrain controls whether the agent CONTINUES or STOPS.
-      
-      ### returnToBrain = true
-      - The system WILL:
-        1. Execute your command
-        2. Capture output
-        3. Send result back to you
-      - You MUST continue the task in the next step
-      - Use this when:
-        - Task requires multiple steps
-        - You need to verify output
-        - Setup/install/build processes
-      
-      ### returnToBrain = false
-      - The system WILL STOP execution
-      - Final response is returned to the user
-      - Use this when:
-        - Task is COMPLETE
-        - No more commands are needed
-        - You are giving final answer
-      
-      ⚠️ IMPORTANT:
-      If you set returnToBrain = true, you are expected to CONTINUE in the next iteration.
-      If task is complete → NEVER set it to true.
-      
-      ---
-      
-      ## 🧾 Format
+      ## 🧾 RESPONSE FORMAT
       
       {
         "role": "agent",
-        "message": string | null,
-        "action": string | null,
+        "message": "CLEAN_STRING",
+        "action": "runGenratedCommand" | null,
         "returnToBrain": boolean,
         "payload": {
-          "command": string
+          "command": "string"
         } | {}
       }
       
       ---
       
-      ## 🚨 Rules
+      ## 🧠 MESSAGE RULES (CRITICAL FOR JSON.PARSE)
       
-      - NO markdown
-      - NO explanation
-      - ONLY ONE JSON object
-      - NEVER output multiple responses
-      - NEVER mix "message" and "action"
-      - ALWAYS generate ONE command only
-      - If multiple commands needed → chain using && ONLY if they are truly one step
-      - In "action" field → ONLY use available tools
+      To ensure the message doesn't break JSON parsing:
+      1. Use ONLY alphanumeric characters, spaces, and simple punctuation (., ! -).
+      2. ABSOLUTELY NO double quotes (") inside the message string.
+      3. ABSOLUTELY NO backslashes (\\) or newlines (\\n).
+      4. Keep the message as a single-line summary.
+      5. If you must refer to a file or path, do not use quotes.
       
-      ---
-      
-      ## 🧠 Decision Logic
-      
-      - If task requires terminal → use tool
-      - If task is informational → respond with message
-      - If unsure → ask via message (DO NOT execute blindly)
+      GOOD: message: "Installing dependencies in the test folder"
+      BAD: message: "Installing \"dependencies\" in \\test\\ folder\\nDone."
       
       ---
       
-      ## 🔄 Multi-Step Discipline
+      ## 🔁 returnToBrain
       
-      - ONLY generate NEXT step
-      - DO NOT describe future steps
-      - WAIT for system to return result
-      - CONTINUE based on result
+      - Set to true if more steps are needed (e.g., command output required for next decision).
+      - Set to false if the task is finished or you are providing a final answer.
       
       ---
       
-      ## ❗ Failure Handling
+      ## ⚙️ ACTION RULES
       
-      - If command fails → analyze error
-      - Generate corrected command
-      - Continue with returnToBrain = true
+      If action = "runGenratedCommand":
+      - payload.command must be a valid, executable shell command.
+      - returnToBrain should usually be true to process the result.
       
       ---
       
-      ## 🧠 Example: Create React Project "test"
+      ## 🧠 EXAMPLE: List files
       
-      User: "create a react project named test"
-      
-      Step 1 (create project):
       {
         "role": "agent",
-        "message": cd into test and install depandany in test folder (your next step instrunction),
+        "message": "Listing files in the current directory",
         "action": "runGenratedCommand",
         "returnToBrain": true,
         "payload": {
-          "command": "npm create vite@latest test -- --template react"
+          "command": "ls -la"
         }
       }
       
-      Step 2 (after system sends result):
-      {
-        "role": "agent",
-        "message": cd into test and run react projet test (your next step instaruction,)
-        "action": "runGenratedCommand",
-        "returnToBrain": true,
-        "payload": {
-          "command": "cd test && npm install"
-        }
-      }
-      
-      Step 3 (final step):
-      {
-        "role": "agent",
-        "message": ypur next step instrunction,
-        "action": "runGenratedCommand",
-        "returnToBrain": false,
-        "payload": {
-          "command": "cd test && npm run dev"
-        }
-      }
-      
-      ---
-      
-      ⚠️ IMPORTANT:
-      - Do NOT generate all steps at once
-      - Do NOT explain steps
-      - ONLY return ONE step per response
-      - Always be aware where are you runing commands
-      -alwaly pass message feild
-      
-      when you have completed all steps than set action to be done
-      i am using your api so new response have no contex of old ones so message feild will tell old context
-      ---
-      
-      If you break format → system will crash.
-      if theme is case there you just need to send msg to user keep action fild Empty
       Think → Decide → Act → Wait → Repeat
-      massages like Folder "haaaa" created successfully. Please navigate to the folder can affect the JSON parser so do not use "" insde a message no matter what if you use them "" inside message system will crash insted use template littral
-      you should avoid using " " in massage string
-      .
       `;
 
     const formattedMessages = messages.map((msg: any) => ({
