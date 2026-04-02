@@ -27,9 +27,9 @@ class Session(BaseModel):
 
     sessionId: str
     goal: str
-    todo_list: List[Task] = []
+    todo_list: List[Task] = Field(default_factory =list )
     current_step: int = 0
-    history: List[HistoryItem] = []
+    history: List[HistoryItem] = Field(default_factory =list )
     status: str = "running"
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
@@ -56,7 +56,7 @@ class MongoDbService:
     def create_session(self, session: Session) -> Session:
       
         if self.sessions_collection is not None:
-            self.sessions_collection.insert_one(session.dict())
+            self.sessions_collection.insert_one(session.model_dump())
         return session
 
     def get_session(self, session_id: str) -> Optional[Dict[str, Any]]:
@@ -77,7 +77,7 @@ class MongoDbService:
             self.sessions_collection.update_one(
                 {"sessionId": session_id},
                 {
-                    "$push": {"history": history_item.dict()},
+                    "$push": {"history": history_item.model_dict()},
                     "$set": {"updated_at": datetime.utcnow()}
                 }
             )
