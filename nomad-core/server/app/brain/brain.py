@@ -1,3 +1,7 @@
+from pydantic import BaseModel, Field
+from gorq import Groq
+from typing import List
+import os
 SYSTEM_PROMPT = """You are NOMAD, an autonomous AI terminal execution agent.
 
 Your job is to:
