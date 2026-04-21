@@ -1,1 +1,1 @@
-from server.app.db.mongo import DbService 
+from .mongo import DbService

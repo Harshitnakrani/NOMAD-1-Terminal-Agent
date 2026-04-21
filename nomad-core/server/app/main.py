@@ -1,7 +1,10 @@
 from fastapi import FastAPI
-from pydantic import BaseModel, List
-from typing import Union
-from server.app.db.mongo import mongo_service, Session
+from pydantic import BaseModel
+from typing import Union, List
+try:
+    from server.app.db.mongo import mongo_service, Session
+except ModuleNotFoundError:
+    from db.mongo import mongo_service, Session
  
 app = FastAPI()
 
