@@ -11,7 +11,7 @@ MONGO_URL = os.getenv('MONGODB_URL')
 DB_NAME = os.getenv('MONGODB_NAME', 'NOMAD-cluster')
 
 class Task(BaseModel):
-    
+
     id: int
     task: str
     status: str = "pending"

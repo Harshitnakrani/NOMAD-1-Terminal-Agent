@@ -12,9 +12,9 @@ class Payload(BaseModel):
     
 @app.post("/api/v1/chat")
 def chat(payload: Payload):
-    session
-    if !payload.session:
-        session = mongo_service.create_session(payload.session)
+    session = payload.session
+    if not session:
+        session = mongo_service.create_session()
 
     #TODO brain integration here
      

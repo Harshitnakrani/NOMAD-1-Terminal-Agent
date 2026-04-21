@@ -1,96 +1,38 @@
-# 📈 NOMAD-1 Progress Tracker
+# 🚀 NOMAD-1 Project Progress Report
 
-This file tracks the development progress of **NOMAD-1**, an autonomous AI terminal execution agent.
+This document reflects the current state of the NOMAD-1 project in relation to the roadmap outlined in `PHASES.md`.
+
+## 📊 Current Status: Transitioning to Phase 2
+
+We have successfully completed **Phase 1: Foundation & Skeleton**. The core backend directories, database integration, memory structures, and LLM clients have been scaffolded. We are now moving into **Phase 2**, which focuses on building the Planner and the core Agent Loop.
+
+### 📍 Phase Tracking
+
+*   **Phase 1: Foundation & Skeleton** -> ✅ **COMPLETED**
+*   **Phase 2: Core Agent Loop & Planning** -> 🏃 **IN PROGRESS**
+*   **Phase 3: Execution & Safety** -> ⚪ *Not Started*
+*   **Phase 4: Feedback Loop & Refinement** -> ⚪ *Not Started*
+*   **Phase 5: Polish & V1 Release** -> ⚪ *Not Started*
 
 ---
 
-## 🏗️ Project Architecture Status
+### 🧩 Module Health Check
 
-The project follows a looped agent architecture: **Observe → Plan → Execute → Evaluate → Repeat**.
-
-| Module | Status | Description |
+| Module | Status | Notes |
 | :--- | :--- | :--- |
-| **🧠 Brain (LLM Interface)** | 🟡 Partial | System prompt defined; integration pending. |
-| **📋 Planner** | 🔴 Not Started | Directory created; logic pending. |
-| **⚙️ Executor** | 🔴 Not Started | Directory created; shell/file operations pending. |
-| **🛡️ Safety Layer** | 🔴 Not Started | Directory created; validation logic pending. |
-| **📜 Memory Module** | 🟢 Completed | Short-term and Long-term memory logic implemented. |
-| **🗄️ Database (MongoDB)** | 🟢 Completed | MongoDB service with Session and Task schemas implemented. |
-| **🔁 Agent Loop Controller**| 🔴 Not Started | Main execution loop logic pending. |
-| **🚀 Main API (FastAPI)** | 🟡 Partial | Skeleton created; requires fix and integration. |
+| **🧠 Brain** | ✅ Scaffolded | `brain.py` and `llm_client.py` exist. |
+| **🗄️ Database** | ✅ Scaffolded | `mongo.py` handles MongoDB session creation. |
+| **📜 Memory** | ✅ Scaffolded | Base classes defined in `memory.py`. |
+| **🌐 API Route (`main.py`)** | 🔴 Needs Fixes | Core file exists but has syntax errors (`if !payload.session`) and requires connecting the remaining modules. |
+| **📋 Planner** | ⚪ Not Started | Needs logic to convert goals into JSON. |
+| **⚙️ Executor** | ⚪ Not Started | Needs `subprocess` execution logic. |
+| **🛡️ Safety Validator** | ⚪ Not Started | Needs rules to block dangerous commands. |
+| **🔁 Agent Loop** | ⚪ Not Started | Needs the central control loop (`agent/loop.py`). |
 
 ---
 
-## 🛠️ Implementation Details (nomad-core)
+## 📋 Immediate Action Items (Start of Phase 2)
 
-### 1. 🧠 Brain (`nomad-core/server/app/brain/`)
-- [x] Define `SYSTEM_PROMPT` with Planner, Executor, Evaluation, and Completion modes.
-- [ ] Implement LLM client (Groq/Ollama) integration.
-- [ ] Implement structured JSON parsing and validation.
-
-### 2. 📋 Planner (`nomad-core/server/app/planner/`)
-- [ ] Implement goal-to-TODO list conversion logic.
-- [ ] Define task structure (id, task, tool).
-
-### 3. ⚙️ Executor (`nomad-core/server/app/executer/`)
-- [ ] Implement shell command execution using `subprocess`.
-- [ ] Implement file system operations (create, read, write, delete).
-- [ ] Implement tool registry.
-
-### 4. 🛡️ Safety Layer (`nomad-core/server/app/safety/`)
-- [ ] Implement command blacklisting (`rm -rf /`, etc.).
-- [ ] Implement path validation.
-- [ ] Implement loop detection.
-
-### 5. 📜 Memory Module (`nomad-core/server/app/memory/`)
-- [x] Implement `ShortTermMemory` for current task state and errors.
-- [x] Implement `LongTermMemory` for session history and status tracking.
-
-### 6. 🗄️ Database (`nomad-core/server/app/db/`)
-- [x] Implement `MongoDbService` for session management.
-- [x] Define `Task`, `HistoryItem`, and `Session` Pydantic models.
-- [x] Configure environment variable loading for MongoDB connection.
-
-### 7. 🔁 Agent Loop (`nomad-core/server/app/agent/`)
-- [ ] Implement the core execution loop (Receive → Plan → Loop → Finish).
-- [ ] Integrate Brain, Executor, and Memory within the loop.
-
-### 8. 🌐 Server (`nomad-core/server/app/main.py`)
-- [x] Initial FastAPI setup.
-- [ ] Fix syntax errors in `chat` endpoint.
-- [ ] Integrate agent loop with the API.
-
----
-
-## 📅 Roadmap & Next Steps
-
-1.  **Fix `main.py`**: Correct syntax errors and improve basic endpoint structure.
-2.  **Implement Brain Integration**: Connect the system prompt to an LLM provider (e.g., Groq).
-3.  **Build the Planner**: Develop the logic to generate a structured TODO list from a user goal.
-4.  **Develop the Executor**: Implement basic shell command and file operation tools.
-5.  **Establish the Agent Loop**: Connect all modules into a functional iterative loop.
-6.  **Add Safety Checks**: Ensure commands are validated before execution.
-
----
-
-## 📁 Current File Structure
-
-```text
-nomad-core/
-└── server/
-    └── app/
-        ├── main.py (Skeleton)
-        ├── agent/ (Empty)
-        ├── brain/
-        │   └── brain.py (Prompt defined)
-        ├── db/
-        │   └── mongo.py (Implemented)
-        ├── executer/ (Empty)
-        ├── memory/
-        │   └── memory.py (Implemented)
-        ├── planner/ (Empty)
-        └── safety/ (Empty)
-```
-
----
-*Last Updated: April 5, 2026*
+1.  **Fix `main.py`:** Go to `nomad-core/server/app/main.py`. Change line 16 from `if !payload.session:` to `if not payload.session:`. Remove the standalone `session` variable on line 15. Verify that FastAPI starts properly.
+2.  **Code Cleanup:** Remove `nomad-core/main.go` to keep the project strictly Python.
+3.  **Start Planner:** Begin writing `nomad-core/server/app/planner/planner.py`. Define the system prompt that forces the LLM to output the `TODO list` array specified in the `README.md`.
