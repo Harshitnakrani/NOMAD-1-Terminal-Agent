@@ -16,22 +16,22 @@ The goal of this phase was to establish the modular architecture and build the b
 
 ---
 
-## 🏃 Phase 2: Core Agent Loop & Planning (Next Steps)
+## ✅ Phase 2: Core Agent Loop & Planning (Completed)
 
 This phase focuses on the cognitive side: taking a user's goal, converting it into a plan, and setting up the control loop.
 
-*   [ ] **Fix Entry Point:** Resolve syntax errors in `main.py` and ensure the FastAPI server runs correctly.
-*   [ ] **Implement Planner (`planner/planner.py`):** 
+*   [x] **Fix Entry Point:** Resolve syntax errors in `main.py` and ensure the FastAPI server runs correctly.
+*   [x] **Implement Planner (`planner/planner.py`):** 
     *   Write prompts and logic to convert user intent into a structured JSON `TODO list`.
     *   Test JSON parsing and validation from the LLM.
-*   [ ] **Build the Agent Loop (`agent/loop.py`):**
+*   [x] **Build the Agent Loop (`agent/loop.py`):**
     *   Create the central controller that receives a session/goal.
     *   Connect the controller to the Planner to generate tasks.
     *   Set up the basic iteration logic over the pending tasks.
 
 ---
 
-## ⚙️ Phase 3: Execution & Safety Validator
+## 🏃 Phase 3: Execution & Safety Validator (Next Steps)
 
 This phase introduces the physical capabilities of the agent: executing commands and ensuring it does so safely.
 

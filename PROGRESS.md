@@ -2,15 +2,15 @@
 
 This document reflects the current state of the NOMAD-1 project in relation to the roadmap outlined in `PHASES.md`.
 
-## 📊 Current Status: Transitioning to Phase 2
+## 📊 Current Status: Transitioning to Phase 3
 
-We have successfully completed **Phase 1: Foundation & Skeleton**. The core backend directories, database integration, memory structures, and LLM clients have been scaffolded. We are now moving into **Phase 2**, which focuses on building the Planner and the core Agent Loop.
+We have successfully completed **Phase 2: Core Agent Loop & Planning**. The `main.py` entry point correctly generates sessions, the `Planner` safely parses LLM output, and the `Agent Loop` correctly stores generated tasks into the MongoDB session. We are now moving into **Phase 3**, which focuses on executing those planned tasks securely.
 
 ### 📍 Phase Tracking
 
 *   **Phase 1: Foundation & Skeleton** -> ✅ **COMPLETED**
-*   **Phase 2: Core Agent Loop & Planning** -> 🏃 **IN PROGRESS**
-*   **Phase 3: Execution & Safety** -> ⚪ *Not Started*
+*   **Phase 2: Core Agent Loop & Planning** -> ✅ **COMPLETED**
+*   **Phase 3: Execution & Safety** -> 🏃 **IN PROGRESS**
 *   **Phase 4: Feedback Loop & Refinement** -> ⚪ *Not Started*
 *   **Phase 5: Polish & V1 Release** -> ⚪ *Not Started*
 
@@ -20,19 +20,26 @@ We have successfully completed **Phase 1: Foundation & Skeleton**. The core back
 
 | Module | Status | Notes |
 | :--- | :--- | :--- |
-| **🧠 Brain** | ✅ Scaffolded | `brain.py` and `llm_client.py` exist. |
-| **🗄️ Database** | ✅ Scaffolded | `mongo.py` handles MongoDB session creation. |
+| **🧠 Brain** | ✅ Scaffolded | `brain.py` and `llm_client.py` handle LLM interactions. |
+| **🗄️ Database** | ✅ Completed | `mongo.py` correctly handles session insertion and updates. |
 | **📜 Memory** | ✅ Scaffolded | Base classes defined in `memory.py`. |
-| **🌐 API Route (`main.py`)** | 🔴 Needs Fixes | Core file exists but has syntax errors (`if !payload.session`) and requires connecting the remaining modules. |
-| **📋 Planner** | ⚪ Not Started | Needs logic to convert goals into JSON. |
-| **⚙️ Executor** | ⚪ Not Started | Needs `subprocess` execution logic. |
-| **🛡️ Safety Validator** | ⚪ Not Started | Needs rules to block dangerous commands. |
-| **🔁 Agent Loop** | ⚪ Not Started | Needs the central control loop (`agent/loop.py`). |
+| **🌐 API Route (`main.py`)** | ✅ Functional | Fixed session creation; successfully instantiates the `Loop`. |
+| **📋 Planner** | ✅ Functional | Parses user goals into strict JSON `TODO list` formats. |
+| **🔁 Agent Loop** | ✅ Functional (Part 1) | Retrieves plans and updates MongoDB. Execution stubbed. |
+| **⚙️ Executor** | ⚪ Not Started | Needs `subprocess` logic in `executer/shell.py`. |
+| **🛡️ Safety Validator** | ⚪ Not Started | Needs rules to block dangerous commands (`safety/validator.py`). |
 
 ---
 
-## 📋 Immediate Action Items (Start of Phase 2)
+## 📋 Immediate Action Items (Start of Phase 3)
 
-1.  **Fix `main.py`:** Go to `nomad-core/server/app/main.py`. Change line 16 from `if !payload.session:` to `if not payload.session:`. Remove the standalone `session` variable on line 15. Verify that FastAPI starts properly.
-2.  **Code Cleanup:** Remove `nomad-core/main.go` to keep the project strictly Python.
-3.  **Start Planner:** Begin writing `nomad-core/server/app/planner/planner.py`. Define the system prompt that forces the LLM to output the `TODO list` array specified in the `README.md`.
+1.  **Develop Safety Validator (`safety/validator.py`):**
+    *   Create a denylist of dangerous shell commands (e.g., `rm -rf`, `format`).
+    *   Write a function that parses a planned command and rejects it if it's unsafe.
+2.  **Implement Executor (`executer/shell.py`):**
+    *   Import Python's `subprocess` module.
+    *   Write a function to securely execute a shell command, capture stdout/stderr, and return the exit code.
+    *   Ensure the Executor calls the Safety Validator *before* running anything.
+3.  **Update the Agent Loop (`agent/loop.py`):**
+    *   Replace the "Phase 3 Stub" with a loop that iterates over `session.todo_list` looking for tasks where `status == "pending"`.
+    *   Pass the pending task to the Executor and wait for the result.
