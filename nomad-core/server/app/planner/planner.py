@@ -9,15 +9,20 @@ class Planner:
     def __init__(self):
         self.llmClient = LLMClient()
 
-    def generate_plan(self, user_input: str) -> dict:
+    def generate_plan(self, user_input: str, cwd: str = None) -> dict:
         if not user_input:
             return {
                  "success": False,
                  "error": "No user input provided."
             }
 
-        # Wrap user input to explicitly enforce PLANNER MODE
-        planner_prompt = f"[PLANNER MODE] The user's goal is: '{user_input}'. Please break this down into a structured TODO list following the required JSON format."
+        try:
+            from server.app.utils.dir_context import get_directory_context
+        except ModuleNotFoundError:
+            from utils.dir_context import get_directory_context
+            
+        dir_context = get_directory_context(cwd)
+        planner_prompt = f"[PLANNER MODE] The user's goal is: '{user_input}'.\n\n{dir_context}\n\nPlease break this down into a structured TODO list following the required JSON format."
 
         response = self.llmClient.generate(SYSTEM_PROMPT, planner_prompt)
         

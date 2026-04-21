@@ -27,6 +27,7 @@ class Session(BaseModel):
 
     sessionId: str
     goal: str
+    cwd: Optional[str] = None
     todo_list: List[Task] = Field(default_factory =list )
     current_step: int = 0
     history: List[HistoryItem] = Field(default_factory =list )
@@ -77,7 +78,7 @@ class MongoDbService:
             self.sessions_collection.update_one(
                 {"sessionId": session_id},
                 {
-                    "$push": {"history": history_item.model_dict()},
+                    "$push": {"history": history_item.model_dump()},
                     "$set": {"updated_at": datetime.utcnow()}
                 }
             )

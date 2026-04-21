@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Union, List
 import uuid
@@ -11,11 +12,21 @@ except ModuleNotFoundError:
     from agent.loop import Loop
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 agent_loop = Loop()
 
 class Payload(BaseModel):
     session: Union[Session, None] = None
     messages: List[dict]
+    cwd: Union[str, None] = None
 
 @app.post("/api/v1/chat")
 def chat(payload: Payload):
@@ -25,7 +36,8 @@ def chat(payload: Payload):
     if not session:
         new_session = Session(
             sessionId=str(uuid.uuid4()),
-            goal=user_input
+            goal=user_input,
+            cwd=payload.cwd
         )
         session = mongo_service.create_session(new_session)
 

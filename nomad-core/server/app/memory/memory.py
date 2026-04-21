@@ -1,4 +1,7 @@
-from server.app.db.mongo import mongo_service, HistoryItem, Session
+try:
+    from server.app.db.mongo import mongo_service, HistoryItem, Session
+except ModuleNotFoundError:
+    from db.mongo import mongo_service, HistoryItem, Session
 from typing import List, Optional, Any
 
 class LongTermMemory:

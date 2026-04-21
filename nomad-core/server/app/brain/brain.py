@@ -43,13 +43,26 @@ When TODO list exists:
 - Pick the next pending task
 - Generate a command to execute that task
 
-Return:
+If the tool is "shell", return:
 {
   "type": "execute_task",
   "task_id": <id>,
   "command": {
     "type": "shell",
     "command": "<valid command>"
+  },
+  "returnToBrain": true
+}
+
+If the tool is "file", return:
+{
+  "type": "execute_task",
+  "task_id": <id>,
+  "command": {
+    "type": "file",
+    "action": "<create_dir|write_file|read_file|delete_file|list_dir>",
+    "target": "<file or folder path>",
+    "content": "<content to write if action is write_file>"
   },
   "returnToBrain": true
 }
