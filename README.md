@@ -1,344 +1,126 @@
-
 # 🚀 NOMAD-1 — AI Terminal Execution Agent
 
-## 🧠 Overview
+**NOMAD-1** is an autonomous AI-powered terminal agent designed to automate complex, multi-step system tasks. It understands high-level user goals, breaks them down into strict JSON-based execution plans, interacts with your local filesystem/terminal, and learns from real-time evaluation of its actions.
 
-**NOMAD-1** is an autonomous AI-powered terminal agent that can:
-
-* Understand a user's goal
-* Break it into structured tasks (TODO list)
-* Execute commands step-by-step
-* Learn from execution results
-* Iterate until completion
-
-It follows a **looped agent architecture**:
-
+It operates on a fully autonomous **Cognitive Loop**:
 > **Observe → Plan → Execute → Evaluate → Repeat**
 
 ---
 
-## 🎯 Vision
+## 🏗️ System Architecture
 
-To build a **developer-grade AI execution agent** that can:
+The project is built on a decoupled, full-stack architecture to ensure scalability, safety, and persistent memory.
 
-* Automate terminal workflows
-* Assist in development tasks
-* Act as a foundation for future autonomous systems
+### The Stack
+- **Backend**: Python (FastAPI)
+- **Database**: MongoDB (Persists session state and long-term history)
+- **Clients**: 
+  - 🖥️ **Web UI**: A sleek, glassmorphism HTML/JS frontend (`client/index.html`).
+  - 💻 **Terminal CLI**: A beautiful, rich Python command-line interface (`client/cli.py`).
+- **Default LLM**: Groq API (`llama-3.1-8b-instant`), easily swappable for local models.
 
----
-
-## 🏗️ Architecture
-
-### 🔷 High-Level Flow
-
-```
-Client → Server → Brain → Planner → Executor → Memory → Brain (loop)
-```
-
----
-
-## 🧩 Core Modules
-
-### 1. 🧠 Brain (LLM Interface)
-
-Responsible for reasoning and decision-making.
-
-**Functions:**
-
-* Understand user goal
-* Generate structured JSON output
-* Decide next action
-* Control loop (`returnToBrain`)
+### Advanced Features
+- **Live Directory Context (No Blind Spots)**: Before planning or executing any task, NOMAD takes a live snapshot of the target Working Directory and injects it into the prompt. This ensures the agent never hallucinates file structures and knows exactly what files actually exist.
+- **Native File Operations (FileOps)**: Instead of relying on fragile bash commands (like `echo > file` or `mkdir`), NOMAD natively routes `file` tools to the `FileExecutor`, leveraging Python's built-in `os` and `shutil` modules for safe, robust filesystem manipulation.
+- **Rich Execution Logging**: Both the Web UI and CLI stream the exact terminal outputs (`stdout`/`stderr`) and raw file contents written by the agent directly to your screen in real-time.
 
 ---
 
-### 2. 📋 Planner
+## 🧩 The Cognitive Loop
 
-First step of execution.
+1. **Planner (`planner.py`)**: Receives the user goal and the live directory context, outputting a strict JSON `TODO` list.
+2. **Executor (`loop.py`)**: 
+   - **ShellExecutor (`shell.py`)**: Executes terminal commands safely.
+   - **FileExecutor (`file_ops.py`)**: Executes native python file/folder operations.
+3. **Safety Validator (`validator.py`)**: Blocks known destructive commands (e.g., `rm -rf /`) before they hit the OS.
+4. **Memory (`memory.py`)**: Records the exact command run and the resulting output into MongoDB.
+5. **Evaluator (`brain.py`)**: Analyzes the terminal output/errors and decides whether to mark the task as `completed`, `failed`, or to modify the plan and retry.
 
-**Responsibilities:**
+---
 
-* Convert user goal into structured TODO list
+## ⚙️ Setup & Installation
 
-**Example Output:**
+### Prerequisites
+- Python 3.9+
+- MongoDB instance running locally (or via MongoDB Atlas)
 
-```json
-[
-  {
-    "id": 1,
-    "task": "Create project folder",
-    "status": "pending",
-    "tool": "shell"
-  },
-  {
-    "id": 2,
-    "task": "Create index.js file",
-    "status": "pending",
-    "tool": "file"
-  }
-]
+### 1. Install Dependencies
+```bash
+cd nomad-core
+python -m venv .venv
+source .venv/bin/activate  # On Windows use: .venv\Scripts\activate
+pip install fastapi uvicorn pydantic pymongo groq rich requests python-dotenv
 ```
 
----
-
-### 3. ⚙️ Executor
-
-Handles actual system execution.
-
-**Supports:**
-
-* Shell commands
-* File operations
-* Future: APIs, scripts, tools
-
-**Example:**
-
-```json
-{
-  "type": "shell",
-  "command": "mkdir my-project"
-}
+### 2. Environment Variables
+Create a `.env` file in the root directory:
+```env
+GROQ_API_KEY=your_api_key_here
+MONGODB_URL=mongodb://localhost:27017/
+MONGODB_NAME=NOMAD-cluster
 ```
 
----
-
-### 4. 🛡️ Safety Layer (Validator)
-
-Prevents dangerous execution.
-
-**Validates:**
-
-* Unsafe commands (`rm -rf /`)
-* Invalid paths
-* Infinite loops
-* Restricted operations
-
----
-
-### 5. 📜 Memory Module
-
-#### 🔹 Short-Term Memory
-
-* Current step
-* Last output
-* Errors
-
-#### 🔹 Long-Term Memory (optional)
-
-* Stored in database
-* Session history
-* Execution logs
-
----
-
-### 6. 🗄️ Database (MongoDB)
-
-Stores session state.
-
-**Schema Example:**
-
-```json
-{
-  "sessionId": "string",
-  "goal": "string",
-  "todo_list": [],
-  "current_step": 0,
-  "history": [],
-  "status": "running"
-}
+### 3. Start the Server
+Run the FastAPI backend on port 8080:
+```bash
+uvicorn server.app.main:app --reload --port 8080
 ```
 
----
-
-### 7. 🔁 Agent Loop Controller
-
-Controls execution lifecycle.
-
-**Flow:**
-
-```
-1. Receive user input
-2. Check/Create session
-3. Generate TODO list (Planner)
-4. Loop:
-   - Pick next task
-   - Execute task
-   - Store result
-   - Send result back to Brain
-   - Brain decides next step
-5. End when complete
+### 4. Launch a Client
+**Option A: Terminal CLI (Recommended)**
+```bash
+python client/cli.py
 ```
 
----
-
-## 🔄 Execution Flow
-
-### Step-by-Step
-
-1. User sends a task
-
-2. Server checks session:
-
-   * If exists → load
-   * Else → create new
-
-3. Brain generates TODO list
-
-4. Loop begins:
-
-   * Select next task
-   * Execute via Executor
-   * Store result in DB
-   * Send feedback to Brain
-
-5. Brain decides:
-
-   * Continue
-   * Modify plan
-   * Retry
-   * Finish
-
-6. Final conclusion returned to user
+**Option B: Web UI**
+Simply open `client/index.html` in your web browser.
 
 ---
 
-## 🧾 Brain Output Format
+## 🔌 Using a Local Model (Ollama / LM Studio)
 
-```json
-{
-  "type": "create_todo" | "execute_task" | "final_answer",
-  "todo": [],
-  "task_id": 1,
-  "command": {
-    "type": "shell",
-    "command": "mkdir test"
-  },
-  "returnToBrain": true
-}
+NOMAD-1 is designed to be easily modified to run entirely offline using local LLMs. 
+
+If you want to use **Ollama** or **LM Studio**, you just need to swap out the Groq client for the standard OpenAI Python client in the Brain module.
+
+### How to modify:
+1. Install the OpenAI SDK: `pip install openai`
+2. Open `nomad-core/server/app/brain/llm_client.py`.
+3. Replace the `Groq` initialization with the local endpoint.
+
+**Example for Ollama (`http://localhost:11434`):**
+```python
+from openai import OpenAI
+
+class LLMClient:
+    def __init__(self):
+        # Point to your local Ollama instance
+        self.client = OpenAI(
+            base_url="http://localhost:11434/v1/",
+            api_key="ollama" # API key is required but ignored by Ollama
+        )
+        self.model = "llama3" # Or whatever model you have pulled in Ollama
 ```
 
----
+**Example for LM Studio (`http://localhost:1234`):**
+```python
+from openai import OpenAI
 
-## 📁 Project Structure
-
+class LLMClient:
+    def __init__(self):
+        # Point to your local LM Studio instance
+        self.client = OpenAI(
+            base_url="http://localhost:1234/v1/",
+            api_key="lm-studio"
+        )
+        self.model = "local-model"
 ```
-nomad/
-│
-├── brain/
-│   └── llm_client.py
-│
-├── planner/
-│   └── planner.py
-│
-├── executor/
-│   ├── shell.py
-│   ├── file_ops.py
-│   └── registry.py
-│
-├── safety/
-│   └── validator.py
-│
-├── memory/
-│   ├── short_term.py
-│   └── long_term.py
-│
-├── agent/
-│   └── loop.py
-│
-├── db/
-│   └── mongo.py
-│
-└── main.py
-```
-
----
-
-## ⚡ Tech Stack
-
-* **Language:** Python
-* **LLM:** any local model via ollama and for development :- Groq (llama-3.1-8b-instant)
-* **Database:** MongoDB
-* **Execution:** subprocess
-* **Validation:** Pydantic
-* **CLI UI (optional):** Rich
-
----
-
-## 🧠 Design Principles
-
-* Modular architecture
-* Clear separation of concerns
-* Structured communication (JSON)
-* Safe execution
-* Iterative reasoning loop
-
----
-
-## 🚀 Future Enhancements
-
-* 🔌 Plugin/tool system
-* 🌐 Web browsing capability
-* 🧑‍💻 Code generation + editing
-* 🐛 Self-debugging loops
-* 🧠 Vector memory (semantic recall)
-* 🔄 Parallel task execution
-
----
-
-## ⚠️ Limitations (v1)
-
-* Limited toolset
-* No sandboxed execution (yet)
-* Basic error recovery
-* Linear task execution
-
----
-
-## 🧪 Example Use Case
-
-**Input:**
-
-```
-Create a Node.js project with index.js and install express
-```
-
-**Execution:**
-
-* Create folder
-* Initialize npm
-* Install express
-* Create index.js
-
----
-
-## 💡 Philosophy
-
-NOMAD is not just a script runner.
-
-It is:
-
-> 🧠 A thinking system
-> ⚙️ A doing system
-> 🔁 A learning loop
+*Note: Local models must be highly capable of strict JSON output formatting (like Llama-3 8B Instruct) to ensure the Agent Loop does not break.*
 
 ---
 
 ## 👨‍💻 Author
 
 **Harshit Nakrani**
-
----
-
-## ⭐ Final Note
-
-This is the foundation of something powerful.
-
-If built correctly, NOMAD can evolve into:
-
-* a developer assistant
-* an autonomous coding agent
-* a full AI operating layer
-
----
 
 **Build smart. Build safe. Build powerful. 🚀**
